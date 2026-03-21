@@ -32,7 +32,14 @@ class LLMClient:
         if not self.api_key:
             raise ValueError("OPENROUTER_API_KEY is required")
 
-        self.model = model
+        self.model = (
+            model
+            or os.getenv("OPENROUTER_MODEL")
+            or "mistralai/mistral-7b-instruct"
+        )
+        if not self.model:
+            raise ValueError("Model is required via model argument or OPENROUTER_MODEL")
+
         self.timeout = timeout_seconds
 
     async def generate(self, system_prompt: str, user_prompt: str) -> str:
@@ -99,7 +106,17 @@ class LLMClient:
             status = exc.response.status_code
             body = exc.response.text
             logger.error("OpenRouter HTTP error %s: %s", status, body)
-            raise RuntimeError(f"OpenRouter HTTP error {status}") from exc
+
+            if status == 400 and "not a valid model ID" in body.lower():
+                raise RuntimeError(
+                    "OpenRouter model invalid: configure OPENROUTER_MODEL with a valid model id"
+                ) from exc
+            if status == 404 and "no endpoints found" in body.lower():
+                raise RuntimeError(
+                    "OpenRouter endpoint not found for model. Confirm model availability and API plan"
+                ) from exc
+
+            raise RuntimeError(f"OpenRouter HTTP error {status}: {body}") from exc
         except httpx.RequestError as exc:
             logger.error("OpenRouter request error: %s", exc)
             raise RuntimeError("OpenRouter network request failed") from exc

@@ -38,6 +38,18 @@ Diplomatrix AI is a sophisticated **multi-agent orchestration system** that simu
 
 ---
 
+## 🌐 Quick Deploy
+
+Deploy to production in minutes:
+
+- **Backend**: Render (FastAPI)
+- **Frontend**: Vercel (React)
+- **Guide**: See [DEPLOYMENT.md](./DEPLOYMENT.md) for step-by-step instructions
+
+For local setup: `chmod +x setup.sh && ./setup.sh`
+
+---
+
 ## ✨ Features
 
 ### AI Agents Orchestration
@@ -101,6 +113,12 @@ Diplomatrix AI is a sophisticated **multi-agent orchestration system** that simu
     └─ UI displays winner with score bars
 ```
 
+## 📚 Documentation
+
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Step-by-step guide to deploy on Render + Vercel
+- **[API_REFERENCE.md](./API_REFERENCE.md)** - Complete API documentation with examples
+- **[LICENSE](./LICENSE)** - MIT License
+
 ---
 
 ## 🚀 Quick Start
@@ -160,11 +178,11 @@ Then visit `http://localhost:5173` to start a debate.
 
 ## 📡 API Usage
 
-### Start a Debate
+Start a debate and stream all agent responses via Server-Sent Events:
 
 **Endpoint**: `POST /api/debate/run`
 
-**Request**:
+**Quick Example**:
 ```bash
 curl -X POST http://localhost:8000/api/debate/run \
   -H "Content-Type: application/json" \
@@ -174,15 +192,17 @@ curl -X POST http://localhost:8000/api/debate/run \
   }'
 ```
 
-**Response** (Server-Sent Events stream):
+**Response** (streaming): Each agent message arrives as an event:
 ```json
 {
   "phase": "opening",
   "speaker": "USA",
-  "message": "We believe thoughtful regulation is essential...",
+  "message": "We believe thought-provoking regulation is essential...",
   "timestamp": "2026-03-22T10:30:00Z"
 }
 ```
+
+**For complete API documentation** including JavaScript, Python examples, error handling, and all endpoints → See [API_REFERENCE.md](./API_REFERENCE.md)
 
 ---
 

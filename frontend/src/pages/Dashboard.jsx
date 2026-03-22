@@ -80,11 +80,72 @@ function Dashboard({ onBack }) {
       return null
     }
 
+    const inferWinnerFromScores = (scores) => {
+      const entries = Object.entries(scores || {})
+      if (!entries.length) {
+        return 'Pending'
+      }
+
+      const totals = entries.map(([country, value]) => {
+        const total = ['logic', 'diplomacy', 'facts', 'strategy'].reduce(
+          (sum, key) => sum + Number(value?.[key] || value?.total || value?.score || 0),
+          0,
+        )
+        return [country, total]
+      })
+
+      totals.sort((a, b) => b[1] - a[1])
+      return totals[0][0]
+    }
+
+    const recoverScoresFromText = (rawText) => {
+      const scores = {}
+      const pattern =
+        /"([^"]+)"\s*:\s*\{\s*"logic"\s*:\s*(\d+(?:\.\d+)?)\s*,\s*"diplomacy"\s*:\s*(\d+(?:\.\d+)?)\s*,\s*"facts"\s*:\s*(\d+(?:\.\d+)?)\s*,\s*"strategy"\s*:\s*(\d+(?:\.\d+)?)/g
+
+      let match = pattern.exec(rawText)
+      while (match) {
+        scores[match[1]] = {
+          logic: Number(match[2]),
+          diplomacy: Number(match[3]),
+          facts: Number(match[4]),
+          strategy: Number(match[5]),
+        }
+        match = pattern.exec(rawText)
+      }
+
+      return scores
+    }
+
     try {
-      return JSON.parse(judgeMessage.content)
-    } catch {
+      const parsed = JSON.parse(judgeMessage.content)
+      const scores = parsed?.scores && typeof parsed.scores === 'object' ? parsed.scores : parsed
+      const normalizedScores =
+        parsed?.scores && typeof parsed.scores === 'object'
+          ? parsed.scores
+          : Object.fromEntries(
+              Object.entries(parsed || {}).filter(([, value]) => value && typeof value === 'object' && !Array.isArray(value)),
+            )
+
       return {
-        winner: judgeMessage.agent || 'Judge',
+        ...parsed,
+        scores: normalizedScores,
+        winner: parsed?.winner || inferWinnerFromScores(normalizedScores),
+        reasoning: parsed?.reasoning || 'Judge evaluation generated from delegate score totals.',
+      }
+    } catch {
+      const recoveredScores = recoverScoresFromText(judgeMessage.content)
+
+      if (Object.keys(recoveredScores).length > 0) {
+        return {
+          scores: recoveredScores,
+          winner: inferWinnerFromScores(recoveredScores),
+          reasoning: 'Judge evaluation generated from the available score output.',
+        }
+      }
+
+      return {
+        winner: 'Pending',
         reasoning: judgeMessage.content,
       }
     }

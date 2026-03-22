@@ -25,6 +25,11 @@ class DebateOrchestrator:
         self.state = state
         self.retriever = retriever or Retriever()
 
+        if self.moderator is None:
+            raise ValueError("Moderator agent must be initialized")
+        if self.judge is None:
+            raise ValueError("Judge agent must be initialized")
+
     def initialize_debate(self, topic: str, countries: List[str]) -> None:
         """Initialize debate state."""
         self.state.topic = topic
@@ -32,6 +37,7 @@ class DebateOrchestrator:
         self.state.current_round = "opening"
         self.state.history = []
         self.state.resolution = None
+        self.state.judgement = None
         self.state.votes = {}
 
     async def _ask_agent(self, agent, context: str):
@@ -58,6 +64,7 @@ class DebateOrchestrator:
         text = self._normalize_response(response)
         self.state.history.append(DebateMessage(agent=agent.name, role=phase, content=text))
         print(f"  -> {agent.name} ({phase}): {text[:80]}...")
+        await asyncio.sleep(1)
 
     async def run_opening_round(self) -> None:
         """Run opening statements sequentially."""
@@ -82,19 +89,20 @@ class DebateOrchestrator:
     async def run_resolution_phase(self) -> None:
         """Generate final resolution from moderator."""
         self.state.current_round = "resolution"
-        print("Moderator generating response...")
+        print("Running moderator phase...")
         retrieved_context = self.retriever.get_context(self.state.topic)
         context = build_context(
             self.state,
-            "Moderator",
+            "moderator",
             "resolution",
             retrieved_context=retrieved_context,
         )
-        response = await self._ask_agent(self.moderator, context)
+        response = await self.moderator.act(context)
         text = self._normalize_response(response)
 
         self.state.resolution = text
         self.state.history.append(DebateMessage(agent="Moderator", role="resolution", content=text))
+        print("Moderator Response:", text)
         print(f"  -> Moderator (resolution): {text[:80]}...")
 
     async def run_voting_phase(self) -> None:
@@ -113,22 +121,24 @@ class DebateOrchestrator:
     async def run_judging_phase(self) -> Dict[str, str]:
         """Judge evaluates the debate and returns score and reasoning."""
         self.state.current_round = "judging"
-        print("Judge generating response...")
+        print("Running judging phase...")
         retrieved_context = self.retriever.get_context(self.state.topic)
         context = build_context(
             self.state,
-            "Judge",
+            "judge",
             "judging",
             retrieved_context=retrieved_context,
         )
-        response = await self._ask_agent(self.judge, context)
+        response = await self.judge.act(context)
         text = self._normalize_response(response)
 
         decision = {
             "score": "undecided",
             "reasoning": text,
         }
+        self.state.judgement = text
         self.state.history.append(DebateMessage(agent="Judge", role="judging", content=text))
+        print("Judge Response:", text)
         print(f"  -> Judge (judging): {text[:80]}...")
         return decision
 
@@ -146,7 +156,8 @@ class DebateOrchestrator:
         print(f"✅ Opening Round Complete. Messages: {len(self.state.history)}")
 
         print("💬 [PHASE 2] Running Rebuttal Rounds...")
-        await self.run_rebuttal_round(rounds=2)
+        for _ in range(2):
+            await self.run_rebuttal_round()
         print(f"✅ Rebuttal Complete. Total Messages: {len(self.state.history)}")
 
         print("🤝 [PHASE 3] Running Resolution Phase...")

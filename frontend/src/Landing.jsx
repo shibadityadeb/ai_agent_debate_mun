@@ -61,9 +61,9 @@ function Landing({ onStart }) {
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
-                <StatCard label="Committees simulated" value="12k+" />
-                <StatCard label="Speech drafts generated" value="4.8M" />
-                <StatCard label="Delegate satisfaction" value="97%" />
+                <StatCard label="5 agent orchestration" value="live" />
+                <StatCard label="3 rounds" value="proven" />
+                <StatCard label="1 moderator + 1 judging panel" value="standard" />
               </div>
             </div>
 
@@ -85,32 +85,7 @@ function Landing({ onStart }) {
             ))}
           </section>
 
-          <section id="about" className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
-            <GlassPanel className="p-8">
-              <SectionBadge icon={Sparkles}>For Delegates</SectionBadge>
-              <h2 className="mt-5 text-3xl font-bold text-white">Premium committee prep that feels effortless.</h2>
-              <p className="mt-4 text-sm leading-7 text-slate-300">
-                Diplomatrix AI gives delegates a live room to pressure-test speeches, explore voting coalitions,
-                and understand how their position plays across the dais before committee starts.
-              </p>
-            </GlassPanel>
 
-            <GlassPanel className="grid gap-4 p-4 sm:grid-cols-3 sm:p-5">
-              {[
-                ['About', 'Institutional-grade simulations with clean, investor-ready UX.'],
-                ['Pricing', 'Launch with a high-conviction starter tier and scalable team seats.'],
-                ['For Delegates', 'Train rebuttals, moderated caucus answers, and bloc strategy in one place.'],
-              ].map(([title, text]) => (
-                <div
-                  key={title}
-                  className="rounded-2xl border border-white/10 bg-white/5 p-5 transition duration-300 hover:border-cyan-400/35 hover:bg-white/10"
-                >
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-300">{title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-slate-300">{text}</p>
-                </div>
-              ))}
-            </GlassPanel>
-          </section>
         </main>
       </div>
     </div>

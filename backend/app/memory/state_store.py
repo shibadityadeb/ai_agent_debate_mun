@@ -17,6 +17,7 @@ class DebateState(BaseModel):
     current_round: str
     history: List[DebateMessage] = Field(default_factory=list)
     resolution: Optional[str] = None
+    judgement: Optional[str] = None
     votes: Dict[str, str] = Field(default_factory=dict)
 
 
@@ -49,4 +50,3 @@ class StateStore:
     def load(self) -> DebateState:
         """Load debate state from in-memory store."""
         return self.state
-

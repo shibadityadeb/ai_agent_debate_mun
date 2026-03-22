@@ -56,15 +56,7 @@ export function NavBar({ onStart }) {
       </div>
 
       <nav className="hidden items-center gap-8 text-sm text-slate-300 md:flex">
-        <a href="#about" className="transition hover:text-cyan-300">
-          About
-        </a>
-        <a href="#about" className="transition hover:text-cyan-300">
-          Pricing
-        </a>
-        <a href="#about" className="transition hover:text-cyan-300">
-          For Delegates
-        </a>
+        {/* Nav links removed as requested */}
       </nav>
 
       <GradientButton onClick={onStart} className="px-5 py-2.5">

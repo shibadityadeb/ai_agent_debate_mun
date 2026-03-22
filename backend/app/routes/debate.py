@@ -130,6 +130,7 @@ async def generate_debate_with_orchestrator(topic: str, countries: List[str]) ->
             'history': history,
             'final_state': {
                 'resolution': final_state.resolution,
+                'judgement': final_state.judgement,
                 'votes': final_state.votes,
                 'topic': final_state.topic
             }

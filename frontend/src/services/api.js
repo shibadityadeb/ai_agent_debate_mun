@@ -24,8 +24,6 @@ const fetchAPI = async (endpoint, options = {}) => {
     // Parse response
     const data = await response.json();
 
-    console.log(`[API Response]`, data);
-
     // Check for HTTP error status
     if (!response.ok) {
       const errorMsg = data.detail || data.message || `HTTP Error: ${response.status}`;

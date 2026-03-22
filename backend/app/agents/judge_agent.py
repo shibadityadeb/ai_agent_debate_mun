@@ -5,7 +5,9 @@ class JudgeAgent(BaseAgent):
 
     def __init__(self, llm_client, name: str = "Judge"):
         system_prompt = (
-            "Judge each country on logic (0-10), diplomacy, facts, strategy. Output JSON with scores, winner, reasoning."
+            "Judge each country on logic (0-10), diplomacy, facts, strategy. "
+            "Return ONLY clean JSON with no explanation, no markdown, and no text outside JSON. "
+            'Example: {"India":{"logic":8,"diplomacy":9,"facts":7,"strategy":8}}'
         )
         super().__init__(name=name, system_prompt=system_prompt, llm_client=llm_client)
 
@@ -28,4 +30,3 @@ class JudgeAgent(BaseAgent):
         )
 
         return response
-

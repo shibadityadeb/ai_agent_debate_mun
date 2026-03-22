@@ -1,8 +1,8 @@
 """Builds contextual system prompt for debate agents."""
 
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
-from app.memory.state_store import DebateState, DebateMessage
+from app.memory.state_store import DebateMessage, DebateState
 
 
 def _format_message(message: DebateMessage) -> str:
@@ -24,27 +24,17 @@ def build_context(
     history_limit: int = 6,
     max_length: int = 1200,
 ) -> str:
-    """Generate agent prompt context from debate state.
-
-    Args:
-        state: Current debate state.
-        agent_name: Agent receiving context.
-        phase: Current debate phase (e.g., opening, rebuttal).
-        retrieved_context: Real-world knowledge to inject into context.
-        relationships: Optional alliances/conflicts mapping.
-        history_limit: Number of recent messages to include.
-        max_length: Maximum total characters for the generated context.
-
-    Returns:
-        A formatted context string for the agent.
-    """
+    """Generate agent prompt context from debate state."""
     phase_label = phase.capitalize()
+    normalized_agent_name = agent_name.lower()
 
-    # Exclude own previous messages for rebuttal phase, otherwise include all
-    if phase_label.lower() == "rebuttal":
-        messages = [m for m in state.history if m.agent != agent_name]
+    if normalized_agent_name == "judge":
+      messages = list(state.history[-6:])
     else:
-        messages = list(state.history)
+      messages = list(state.history[-4:])
+
+    if phase_label.lower() == "rebuttal":
+        messages = [message for message in messages if message.agent.lower() != normalized_agent_name]
 
     recent = messages[-history_limit:]
 
@@ -99,4 +89,3 @@ def build_context(
 
     context = "\n".join(sections)
     return _truncate_text(context, max_length)
-

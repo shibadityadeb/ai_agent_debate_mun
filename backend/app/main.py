@@ -1,4 +1,5 @@
 """FastAPI app entrypoint for Diplomatrix AI."""
+import logging
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -10,6 +11,11 @@ from app.routes.debate import router as debate_router
 
 # Load environment variables from .env file
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / '.env')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
 
 app = FastAPI(title='Diplomatrix AI')
 config = Config.from_env()
@@ -31,3 +37,9 @@ app.include_router(debate_router, prefix='/api')
 def health_check():
     """Health check endpoint."""
     return {'status': 'ok', 'app': 'Diplomatrix AI'}
+
+
+@app.get('/healthz')
+def readiness_check():
+    """Render health check endpoint."""
+    return {'status': 'ok'}

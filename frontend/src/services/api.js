@@ -5,6 +5,10 @@ const DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
 };
 
+const REQUEST_TIMEOUT_MS = 10000;
+const POLL_INTERVAL_MS = 1500;
+const MAX_JOB_WAIT_MS = 65000;
+
 /**
  * Generic fetch wrapper with error handling
  * @param {string} endpoint - API endpoint path
@@ -12,12 +16,16 @@ const DEFAULT_HEADERS = {
  * @returns {Promise<any>} - Response data
  */
 const fetchAPI = async (endpoint, options = {}) => {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   try {
     const url = `${API_BASE_URL}${endpoint}`;
     console.log(`[API] ${options.method || 'GET'} ${url}`);
     
     const response = await fetch(url, {
       headers: DEFAULT_HEADERS,
+      signal: controller.signal,
       ...options,
     });
 
@@ -36,6 +44,12 @@ const fetchAPI = async (endpoint, options = {}) => {
 
     return data;
   } catch (error) {
+    if (error.name === 'AbortError') {
+      const timeoutError = new Error(`Request timed out after ${REQUEST_TIMEOUT_MS / 1000}s`);
+      console.error('[API Error]', timeoutError.message);
+      throw timeoutError;
+    }
+
     const isNetworkError = error instanceof TypeError;
     const normalizedError = isNetworkError
       ? new Error(
@@ -45,8 +59,12 @@ const fetchAPI = async (endpoint, options = {}) => {
 
     console.error('[API Error]', normalizedError.message);
     throw normalizedError;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 };
+
+const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 /**
  * Start a new debate
@@ -86,10 +104,34 @@ export const runDebate = async (topic, countries = []) => {
     countries: Array.isArray(countries) ? countries : [],
   };
 
-  return fetchAPI('/debate/run', {
+  const acceptedJob = await fetchAPI('/debate/run', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+
+  if (!acceptedJob?.job_id) {
+    throw new Error('Backend did not return a debate job ID.');
+  }
+
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < MAX_JOB_WAIT_MS) {
+    const status = await getDebateStatus(acceptedJob.job_id);
+
+    if (status.status === 'completed') {
+      return fetchAPI(`/debate/${acceptedJob.job_id}/result`, {
+        method: 'GET',
+      });
+    }
+
+    if (status.status === 'failed' || status.status === 'timed_out') {
+      throw new Error(status.error || `Debate job ${status.status}.`);
+    }
+
+    await sleep(POLL_INTERVAL_MS);
+  }
+
+  throw new Error(`Debate job exceeded ${MAX_JOB_WAIT_MS / 1000}s client wait limit.`);
 };
 
 /**

@@ -1,5 +1,7 @@
 """LLM client wrapper for Groq chat completions API."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
@@ -30,6 +32,14 @@ class LLMClient:
         self.model = model or os.getenv("GROQ_MODEL") or "llama-3.1-8b-instant"
         self.timeout = float(os.getenv("GROQ_TIMEOUT_SECONDS", timeout_seconds))
         self.max_retries = max(1, int(os.getenv("GROQ_MAX_RETRIES", "2")))
+        self._client = httpx.AsyncClient(
+            timeout=httpx.Timeout(self.timeout),
+            limits=httpx.Limits(max_keepalive_connections=20, max_connections=50),
+        )
+
+    async def aclose(self) -> None:
+        """Close underlying HTTP resources."""
+        await self._client.aclose()
 
     async def generate(self, system_prompt: str, user_prompt: str) -> str:
         """Generate text completion using Groq."""
@@ -50,58 +60,58 @@ class LLMClient:
 
         logger.debug("Groq request payload: %s", payload)
 
-        try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(self.timeout)) as client:
-                for attempt in range(self.max_retries):
-                    response = await client.post(
-                        self.GROQ_URL,
-                        json=payload,
-                        headers=headers,
+        for attempt in range(self.max_retries):
+            try:
+                response = await self._client.post(
+                    self.GROQ_URL,
+                    json=payload,
+                    headers=headers,
+                )
+
+                if response.status_code == 429:
+                    logger.warning(
+                        "Groq rate limit hit on attempt %s/%s: %s",
+                        attempt + 1,
+                        self.max_retries,
+                        response.text,
                     )
+                    if attempt < self.max_retries - 1:
+                        await asyncio.sleep(1)
+                        continue
+                    raise RuntimeError("Groq rate limit exceeded")
 
-                    if response.status_code == 429:
-                        logger.warning(
-                            "Groq rate limit hit on attempt %s/%s: %s",
-                            attempt + 1,
-                            self.max_retries,
-                            response.text,
-                        )
-                        if attempt < self.max_retries - 1:
-                            await asyncio.sleep(1)
-                            continue
-                        print("LLM ERROR:", response.text)
-                        return "Error: Rate limit exceeded"
+                response.raise_for_status()
+                data = response.json()
+                logger.debug("Groq response: %s", data)
 
-                    response.raise_for_status()
-                    data = response.json()
-                    logger.debug("Groq response: %s", data)
+                choices = data.get("choices")
+                if not choices or not isinstance(choices, list):
+                    raise RuntimeError("Groq response does not contain choices")
 
-                    choices = data.get("choices")
-                    if not choices or not isinstance(choices, list):
-                        raise RuntimeError("Groq response does not contain choices")
+                message = choices[0].get("message", {})
+                text = message.get("content")
+                if not isinstance(text, str) or not text.strip():
+                    raise RuntimeError("Groq response does not contain valid message content")
 
-                    message = choices[0].get("message", {})
-                    text = message.get("content")
-                    if not isinstance(text, str) or not text.strip():
-                        raise RuntimeError("Groq response does not contain valid message content")
+                return text.strip()
+            except httpx.TimeoutException as exc:
+                logger.error("Groq request timed out on attempt %s/%s", attempt + 1, self.max_retries)
+                if attempt < self.max_retries - 1:
+                    await asyncio.sleep(0.5)
+                    continue
+                raise TimeoutError("Groq request timed out") from exc
+            except httpx.HTTPStatusError as exc:
+                status = exc.response.status_code
+                body = exc.response.text
+                logger.error("Groq HTTP error %s: %s", status, body)
+                raise RuntimeError(f"Groq HTTP {status}: {body}") from exc
+            except httpx.RequestError as exc:
+                logger.error("Groq network request failed: %s", exc)
+                if attempt < self.max_retries - 1:
+                    await asyncio.sleep(0.5)
+                    continue
+                raise RuntimeError("Groq network request failed") from exc
+            except (ValueError, KeyError, IndexError, RuntimeError):
+                raise
 
-                    return text.strip()
-
-        except httpx.TimeoutException as exc:
-            logger.error("Groq request timed out: %s", exc)
-            print("LLM ERROR: request timed out")
-            return "Error: Request timed out"
-        except httpx.HTTPStatusError as exc:
-            status = exc.response.status_code
-            body = exc.response.text
-            logger.error("Groq HTTP error %s: %s", status, body)
-            print("LLM ERROR:", body)
-            return f"Error: Groq HTTP {status}"
-        except httpx.RequestError as exc:
-            logger.error("Groq network request failed: %s", exc)
-            print("LLM ERROR: network request failed")
-            return "Error: Network request failed"
-        except (ValueError, KeyError, IndexError, RuntimeError) as exc:
-            logger.error("Groq response parse error: %s", exc)
-            print("LLM ERROR:", str(exc))
-            return "Error: Failed to parse model response"
+        raise RuntimeError("Groq completion failed after all retries")

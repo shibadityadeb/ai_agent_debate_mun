@@ -3,3 +3,8 @@ uvicorn
 pydantic
 httpx
 python-dotenv
+duckduckgo-search
+newspaper3k
+lxml
+chromadb
+sentence-transformers

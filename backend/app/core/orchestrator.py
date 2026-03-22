@@ -69,7 +69,7 @@ class DebateOrchestrator:
         """Run rebuttal rounds where agents respond strategically to opponents."""
         for i in range(rounds):
             self.state.current_round = f"rebuttal-{i+1}"
-            retrieved_context = self.retriever.get_context(self.state.topic)
+            retrieved_context = self.retriever.get_context(self.state.topic) if self.retriever else ""
             tasks = []
             for agent in self.agents:
                 context = build_context(
@@ -87,8 +87,9 @@ class DebateOrchestrator:
                 results.append((agent.name, text))
 
             for agent_name, text in results:
-                message = DebateMessage(agent=agent_name, role="rebuttal", content=text)
+                message = DebateMessage(agent=agent_name, role=f"rebuttal-{i+1}", content=text)
                 self.state.history.append(message)
+                print(f"  → {agent_name} (Rebuttal {i+1}): {text[:80]}...")
 
     async def run_resolution_phase(self) -> None:
         """Generate final resolution from moderator."""
@@ -143,12 +144,34 @@ class DebateOrchestrator:
 
     async def run_full_debate(self) -> DebateState:
         """Run full debate sequence and return final state."""
-        await self.retriever.fetch_and_store(self.state.topic)
+        print(f"🎭 [ORCHESTRATOR] Starting full debate on topic: {self.state.topic}")
+        
+        # Try to fetch context but continue if it fails
+        try:
+            await self.retriever.fetch_and_store(self.state.topic)
+        except Exception as e:
+            print(f"⚠️  Context retrieval failed: {e}, continuing with debate")
 
+        print("📝 [PHASE 1] Running Opening Round...")
         await self.run_opening_round()
+        print(f"✅ Opening Round Complete. Messages: {len(self.state.history)}")
+
+        print("💬 [PHASE 2] Running Rebuttal Rounds...")
         await self.run_rebuttal_round(rounds=2)
+        print(f"✅ Rebuttal Complete. Total Messages: {len(self.state.history)}")
+
+        print("🤝 [PHASE 3] Running Resolution Phase...")
         await self.run_resolution_phase()
+        print(f"✅ Resolution Complete. Total Messages: {len(self.state.history)}")
+
+        print("🗳️  [PHASE 4] Running Voting Phase...")
         await self.run_voting_phase()
+        print(f"✅ Voting Complete. Votes: {self.state.votes}")
+
+        print("⚖️  [PHASE 5] Running Judging Phase...")
         await self.run_judging_phase()
+        print(f"✅ Judging Complete. Total Messages: {len(self.state.history)}")
+
+        print("🎉 [ORCHESTRATOR] Full debate completed!")
         return self.state
 

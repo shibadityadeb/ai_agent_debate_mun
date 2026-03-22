@@ -1,9 +1,9 @@
 
 from typing import Dict, List, Optional
 import uuid
+import os
 
 import chromadb
-from chromadb.config import Settings
 
 from app.mcp.embedder import Embedder
 
@@ -14,24 +14,24 @@ class VectorStore:
     def __init__(
         self,
         collection_name: str = "default_collection",
-        persist_directory: Optional[str] = "./chromadb",
+        persist_directory: Optional[str] = None,
     ) -> None:
         """Initialize the ChromaDB collection and embedder.
         Args:
             collection_name: Name of the ChromaDB collection to use.
             persist_directory: Local directory to persist vectors.
         """
-        self._client = chromadb.Client(
-            Settings(
-                chroma_db_impl="duckdb+parquet",
-                persist_directory=persist_directory,
-            )
+        if persist_directory is None:
+            persist_directory = os.path.join(os.getcwd(), "chromadb")
+        
+        # Use new ChromaDB PersistentClient API
+        self._client = chromadb.PersistentClient(path=persist_directory)
+        
+        # Always create or get the collection
+        self._collection = self._client.get_or_create_collection(
+            name=collection_name,
+            metadata={"hnsw:space": "cosine"}
         )
-        existing = {c.name for c in self._client.list_collections()}
-        if collection_name in existing:
-            self._collection = self._client.get_collection(name=collection_name)
-        else:
-            self._collection = self._client.create_collection(name=collection_name)
 
         self._embedder = Embedder()
 
@@ -79,14 +79,13 @@ class VectorStore:
         results = self._collection.query(
             query_embeddings=[query_embedding],
             n_results=n_results,
-            include=["ids", "documents", "metadatas", "distances"],
+            include=["documents", "metadatas", "distances"],
         )
 
         documents = []
-        for idx, doc_id in enumerate(results.get("ids", [])):
+        for idx in range(len(results.get("documents", [[]])[0] if results.get("documents") else [])):
             documents.append(
                 {
-                    "id": doc_id,
                     "document": results.get("documents", [[]])[0][idx],
                     "metadata": results.get("metadatas", [[]])[0][idx],
                     "distance": results.get("distances", [[]])[0][idx],

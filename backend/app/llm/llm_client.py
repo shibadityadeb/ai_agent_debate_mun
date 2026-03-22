@@ -1,4 +1,4 @@
-"""LLM client wrapper for OpenRouter chat completions."""
+"""LLM client wrapper for Anthropic Claude API."""
 
 import os
 import logging
@@ -11,39 +11,35 @@ logger = logging.getLogger(__name__)
 
 
 class LLMClient:
-    """Asynchronous OpenRouter LLM client."""
+    """Anthropic Claude LLM client."""
 
-    OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+    ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "mistralai/mistral-7b-instruct",
+        model: str = "claude-3-haiku-20240307",
         timeout_seconds: float = 30.0,
     ):
-        """Initialize LLMClient.
+        """Initialize LLMClient for Claude.
 
         Args:
-            api_key: API key for OpenRouter. Falls back to OPENROUTER_API_KEY env var.
-            model: Model name to use.
+            api_key: API key for Anthropic. Falls back to ANTHROPIC_API_KEY env var.
+            model: Model name to use (default: claude-3-5-sonnet-20241022).
             timeout_seconds: Request timeout in seconds.
         """
-        self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
+        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
         if not self.api_key:
-            raise ValueError("OPENROUTER_API_KEY is required")
+            raise ValueError("ANTHROPIC_API_KEY is required")
 
-        self.model = (
-            model
-            or os.getenv("OPENROUTER_MODEL")
-            or "mistralai/mistral-7b-instruct"
-        )
+        self.model = model or os.getenv("ANTHROPIC_MODEL") or "claude-3-haiku-20240307"
         if not self.model:
-            raise ValueError("Model is required via model argument or OPENROUTER_MODEL")
+            raise ValueError("Model is required via model argument or ANTHROPIC_MODEL")
 
         self.timeout = timeout_seconds
 
     async def generate(self, system_prompt: str, user_prompt: str) -> str:
-        """Generate text completion from OpenRouter.
+        """Generate text completion using Claude.
 
         Args:
             system_prompt: System-level instruction for the model.
@@ -56,71 +52,71 @@ class LLMClient:
             RuntimeError: When the API response indicates an error or invalid data.
         """
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
+            "x-api-key": self.api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
         }
 
         payload = {
             "model": self.model,
+            "max_tokens": 1024,
+            "system": system_prompt,
             "messages": [
-                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "max_tokens": 300,
-            "temperature": 0.7,
         }
 
-        logger.debug("OpenRouter request payload: %s", payload)
+        logger.debug("Claude request payload: %s", payload)
 
         try:
             async with httpx.AsyncClient(timeout=httpx.Timeout(self.timeout)) as client:
                 response = await client.post(
-                    self.OPENROUTER_URL,
+                    self.ANTHROPIC_URL,
                     json=payload,
                     headers=headers,
                 )
 
             response.raise_for_status()
             data = response.json()
-            logger.debug("OpenRouter response: %s", data)
+            logger.debug("Claude response: %s", data)
 
-            choices = data.get("choices")
-            if not choices or not isinstance(choices, list):
-                raise RuntimeError("OpenRouter response does not contain choices")
+            content = data.get("content")
+            if not content or not isinstance(content, list):
+                raise RuntimeError("Claude response does not contain content array")
 
-            first_choice = choices[0]
-            message = first_choice.get("message")
-            if message is None:
-                raise RuntimeError("OpenRouter response choice missing message")
+            first_block = content[0]
+            if first_block.get("type") != "text":
+                raise RuntimeError("Claude response first block is not text type")
 
-            text = message.get("content")
+            text = first_block.get("text")
             if not isinstance(text, str):
-                raise RuntimeError("OpenRouter response does not contain content text")
+                raise RuntimeError("Claude response does not contain text")
 
             return text.strip()
 
+
         except httpx.TimeoutException as exc:
-            logger.error("OpenRouter request timed out: %s", exc)
-            raise RuntimeError("OpenRouter request timed out") from exc
+            logger.error("Claude request timed out: %s", exc)
+            raise RuntimeError("Claude request timed out") from exc
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             body = exc.response.text
-            logger.error("OpenRouter HTTP error %s: %s", status, body)
+            logger.error("Claude HTTP error %s: %s", status, body)
 
-            if status == 400 and "not a valid model ID" in body.lower():
+            if status == 401:
                 raise RuntimeError(
-                    "OpenRouter model invalid: configure OPENROUTER_MODEL with a valid model id"
+                    "Claude API authentication failed: verify ANTHROPIC_API_KEY is valid"
                 ) from exc
-            if status == 404 and "no endpoints found" in body.lower():
+            if status == 400:
                 raise RuntimeError(
-                    "OpenRouter endpoint not found for model. Confirm model availability and API plan"
+                    f"Claude API bad request: {body}"
                 ) from exc
 
-            raise RuntimeError(f"OpenRouter HTTP error {status}: {body}") from exc
+            raise RuntimeError(f"Claude HTTP error {status}: {body}") from exc
         except httpx.RequestError as exc:
-            logger.error("OpenRouter request error: %s", exc)
-            raise RuntimeError("OpenRouter network request failed") from exc
+            logger.error("Claude request error: %s", exc)
+            raise RuntimeError("Claude network request failed") from exc
         except ValueError as exc:
-            logger.error("OpenRouter response parse error: %s", exc)
-            raise RuntimeError("Failed to parse OpenRouter response") from exc
+            logger.error("Claude response parse error: %s", exc)
+            raise RuntimeError("Failed to parse Claude response") from exc
 

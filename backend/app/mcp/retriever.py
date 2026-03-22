@@ -5,7 +5,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional
 
-from duckduckgo_search import ddg
+from duckduckgo_search import DDGS
 from newspaper import Article
 
 from app.mcp.vector_store import VectorStore
@@ -45,7 +45,17 @@ class Retriever:
         if not isinstance(topic, str) or not topic.strip():
             raise ValueError("topic must be a non-empty string")
 
-        results = await asyncio.to_thread(ddg, topic, max_results=self.max_articles)
+        def _search_ddg(query: str, max_results: int):
+            """Synchronous DuckDuckGo search wrapper."""
+            results = []
+            try:
+                with DDGS() as ddgs:
+                    results = list(ddgs.text(query, max_results=max_results))
+            except Exception as e:
+                logging.warning("DDG search failed: %s", e)
+            return results
+
+        results = await asyncio.to_thread(_search_ddg, topic, self.max_articles)
         if not results:
             logging.warning("DDG returned no search results for topic: %s", topic)
             return []

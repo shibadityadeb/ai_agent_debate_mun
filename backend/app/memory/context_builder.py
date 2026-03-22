@@ -1,6 +1,6 @@
 """Builds contextual system prompt for debate agents."""
 
-from typing import List
+from typing import List, Dict, Optional
 
 from app.memory.state_store import DebateState, DebateMessage
 

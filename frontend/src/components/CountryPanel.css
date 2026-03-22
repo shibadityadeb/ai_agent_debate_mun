@@ -1,0 +1,194 @@
+.country-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: fit-content;
+  max-height: 600px;
+  display: flex;
+  flex-direction: column;
+}
+
+.country-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.country-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.country-count {
+  background: var(--bg-tertiary);
+  color: var(--accent-primary);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.country-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}
+
+.country-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.country-item:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+.country-item.is-active-speaker {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.1), rgba(14, 165, 233, 0.1));
+  border-color: var(--border-color);
+}
+
+.country-flag-container {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.country-flag {
+  font-size: 28px;
+  display: block;
+}
+
+.status-indicator {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-primary);
+}
+
+.status-indicator.status-speaking {
+  background: #ef4444;
+  animation: pulse 1s infinite;
+}
+
+.status-indicator.status-active {
+  background: var(--accent-primary);
+}
+
+.status-indicator.status-waiting {
+  background: var(--text-secondary);
+}
+
+.country-info {
+  min-width: 0;
+}
+
+.country-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.country-status {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.status-icon {
+  font-size: 14px;
+}
+
+.country-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border-color);
+}
+
+.score-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.score-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+
+.country-legend {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-dot.speaking {
+  background: #ef4444;
+}
+
+.legend-dot.active {
+  background: var(--accent-primary);
+}
+
+.legend-dot.waiting {
+  background: var(--text-secondary);
+}
+
+@media (max-width: 1024px) {
+  .country-panel {
+    max-height: none;
+  }
+
+  .country-list {
+    max-height: 300px;
+  }
+
+  .country-legend {
+    grid-template-columns: 1fr;
+  }
+}

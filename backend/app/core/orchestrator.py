@@ -2,15 +2,17 @@ import asyncio
 import logging
 import os
 import random
-from typing import Awaitable, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Awaitable, Callable, Dict, List, Optional
 
 from app.agents.country_agent import CountryAgent
 from app.agents.judge_agent import JudgeAgent
 from app.agents.moderator_agent import ModeratorAgent
-from app.mcp.retriever import Retriever
 from app.core.timeout import OperationTimeoutError, run_with_timeout
 from app.memory.context_builder import build_context
 from app.memory.state_store import DebateMessage, DebateState
+
+if TYPE_CHECKING:
+    from app.mcp.retriever import Retriever
 
 
 logger = logging.getLogger(__name__)
@@ -35,7 +37,14 @@ class DebateOrchestrator:
         self.state = state
         self.logger = logger
         retrieval_enabled = os.getenv("ENABLE_TOPIC_RETRIEVAL", "false").lower() == "true"
-        self.retriever = retriever or (Retriever() if retrieval_enabled else None)
+        if retriever is not None:
+            self.retriever = retriever
+        elif retrieval_enabled:
+            from app.mcp.retriever import Retriever
+
+            self.retriever = Retriever()
+        else:
+            self.retriever = None
         self.max_rebuttal_rounds = max(0, int(max_rebuttal_rounds))
         self.step_timeout_seconds = max(1.0, float(step_timeout_seconds))
         default_agent_steps = len(self.agents) * (1 + self.max_rebuttal_rounds) + 2

@@ -7,18 +7,21 @@ from typing import Dict, List, Optional
 
 from duckduckgo_search import DDGS
 
-from app.mcp.vector_store import VectorStore
-
 
 class Retriever:
     def __init__(
         self,
-        vector_store: Optional[VectorStore] = None,
+        vector_store: Optional["VectorStore"] = None,
         max_articles: int = 5,
         min_articles: int = 3,
     ) -> None:
         """Initialize retriever with vector store dependency."""
-        self.vector_store = vector_store or VectorStore()
+        if vector_store is not None:
+            self.vector_store = vector_store
+        else:
+            from app.mcp.vector_store import VectorStore
+
+            self.vector_store = VectorStore()
         self.max_articles = max(1, max_articles)
         self.min_articles = min_articles
 

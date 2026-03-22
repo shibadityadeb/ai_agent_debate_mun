@@ -5,7 +5,8 @@ const DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
 };
 
-const REQUEST_TIMEOUT_MS = 10000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
+const INITIAL_JOB_REQUEST_TIMEOUT_MS = 45000;
 const POLL_INTERVAL_MS = 1500;
 const MAX_JOB_WAIT_MS = 65000;
 
@@ -16,17 +17,18 @@ const MAX_JOB_WAIT_MS = 65000;
  * @returns {Promise<any>} - Response data
  */
 const fetchAPI = async (endpoint, options = {}) => {
+  const { timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS, ...fetchOptions } = options;
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const url = `${API_BASE_URL}${endpoint}`;
-    console.log(`[API] ${options.method || 'GET'} ${url}`);
+    console.log(`[API] ${fetchOptions.method || 'GET'} ${url}`);
     
     const response = await fetch(url, {
       headers: DEFAULT_HEADERS,
       signal: controller.signal,
-      ...options,
+      ...fetchOptions,
     });
 
     const contentType = response.headers.get('content-type') || '';
@@ -45,7 +47,7 @@ const fetchAPI = async (endpoint, options = {}) => {
     return data;
   } catch (error) {
     if (error.name === 'AbortError') {
-      const timeoutError = new Error(`Request timed out after ${REQUEST_TIMEOUT_MS / 1000}s`);
+      const timeoutError = new Error(`Request timed out after ${timeoutMs / 1000}s`);
       console.error('[API Error]', timeoutError.message);
       throw timeoutError;
     }
@@ -107,6 +109,7 @@ export const runDebate = async (topic, countries = []) => {
   const acceptedJob = await fetchAPI('/debate/run', {
     method: 'POST',
     body: JSON.stringify(payload),
+    timeoutMs: INITIAL_JOB_REQUEST_TIMEOUT_MS,
   });
 
   if (!acceptedJob?.job_id) {

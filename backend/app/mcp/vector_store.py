@@ -1,11 +1,8 @@
+from __future__ import annotations
 
 from typing import Dict, List, Optional
 import uuid
 import os
-
-import chromadb
-
-from app.mcp.embedder import Embedder
 
 
 class VectorStore:
@@ -21,6 +18,9 @@ class VectorStore:
             collection_name: Name of the ChromaDB collection to use.
             persist_directory: Local directory to persist vectors.
         """
+        import chromadb
+        from app.mcp.embedder import Embedder
+
         if persist_directory is None:
             persist_directory = os.path.join(os.getcwd(), "chromadb")
         
@@ -93,4 +93,3 @@ class VectorStore:
             )
 
         return documents
-

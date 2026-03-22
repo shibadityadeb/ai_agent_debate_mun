@@ -1,12 +1,11 @@
 from typing import List
-from sentence_transformers import SentenceTransformer
 
 
 class Embedder:
     
 
     _model_name: str = "all-MiniLM-L6-v2"
-    _model: SentenceTransformer | None = None
+    _model = None
 
     def __init__(self, model_name: str | None = None) -> None:
         """Initialize the embedder.
@@ -17,9 +16,11 @@ class Embedder:
             self._model_name = model_name
 
     @classmethod
-    def _get_model(cls) -> SentenceTransformer:
+    def _get_model(cls):
         """Get or load the SentenceTransformer model singleton."""
         if cls._model is None:
+            from sentence_transformers import SentenceTransformer
+
             cls._model = SentenceTransformer(cls._model_name)
         return cls._model
 
@@ -46,4 +47,3 @@ class Embedder:
 
         # Some backends may already return a Python list.
         return embeddings
-

@@ -1,12 +1,14 @@
 import React from 'react'
-import Dashboard from './components/Dashboard'
-import './App.css'
+import Dashboard from './Dashboard'
+import Landing from './Landing'
 
 function App() {
-  return (
-    <div className="app">
-      <Dashboard />
-    </div>
+  const [view, setView] = React.useState('landing')
+
+  return view === 'landing' ? (
+    <Landing onStart={() => setView('dashboard')} />
+  ) : (
+    <Dashboard onBack={() => setView('landing')} />
   )
 }
 

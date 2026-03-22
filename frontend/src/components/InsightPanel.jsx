@@ -1,134 +1,127 @@
-import React from 'react';
-import './InsightPanel.css';
+import React from 'react'
+import { BarChart3, Gavel, Layers3, Vote } from 'lucide-react'
+import { GlassPanel } from './ui'
+import { mockMcpContext } from '../data/mockData'
+
+const phaseDescriptions = {
+  idle: 'Ready to brief delegates and launch the next moderated session.',
+  loading: 'Building country context, strategy cards, and opening position summaries.',
+  opening: 'Opening speeches are entering the chamber with primary policy framing.',
+  'rebuttal-1': 'Delegates are testing each other’s claims and probing weak assumptions.',
+  'rebuttal-2': 'Counter-positioning is escalating as blocs refine coalition strategy.',
+  resolution: 'Key motions and compromise language are being synthesized.',
+  voting: 'Votes are being tallied with alignment shifts across delegations.',
+  judging: 'Judge analysis is complete with winner selection and reasoning.',
+  error: 'The room needs attention before the next simulation can proceed.',
+}
 
 const InsightPanel = ({ phase = 'idle', votes = {}, verdict = null }) => {
-  const phaseLabels = {
-    'idle': '🎯 Ready',
-    'loading': '⏳ Loading',
-    'opening': '🎤 Opening',
-    'rebuttal-1': '🔄 Rebuttal 1',
-    'rebuttal-2': '🔄 Rebuttal 2',
-    'resolution': '📋 Resolution',
-    'voting': '🗳️ Voting',
-    'judging': '⚖️ Judging',
-    'error': '❌ Error'
-  };
-
-  const isJudgingPhase = phase === 'judging';
-  const isVotingOrAfter = ['voting', 'judging'].includes(phase);
+  const totalVotes = Object.values(votes).reduce((sum, value) => sum + value, 0)
+  const showVotes = phase === 'voting' || phase === 'judging'
 
   return (
-    <div className="insight-panel">
-      {/* Phase Status Card */}
-      <div className="insight-card glass-card">
-        <div className="card-header">
-          <h4 className="card-title">📍 Current Phase</h4>
-        </div>
-        <div className="phase-status">
-          <div className="phase-badge">
-            {phaseLabels[phase] || phase}
+    <div className="space-y-5">
+      <GlassPanel className="p-5">
+        <div className="flex items-center gap-3">
+          <div className="rounded-2xl bg-cyan-400/10 p-3 text-cyan-300">
+            <BarChart3 className="h-5 w-5" />
           </div>
-          <p className="phase-description">
-            {phase === 'idle' && 'Ready to start debate'}
-            {phase === 'loading' && 'Initializing agents...'}
-            {phase === 'opening' && 'Countries present opening statements'}
-            {phase === 'rebuttal-1' && 'First rebuttal round in progress'}
-            {phase === 'rebuttal-2' && 'Second rebuttal round in progress'}
-            {phase === 'resolution' && 'Moderator synthesizing positions'}
-            {phase === 'voting' && 'Countries casting votes'}
-            {phase === 'judging' && 'Final judgment complete'}
-          </p>
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Insights</p>
+            <h2 className="mt-1 text-xl font-semibold text-white">Live room telemetry</h2>
+          </div>
         </div>
-      </div>
 
-      {/* Votes Card - Only show from voting phase onwards */}
-      {isVotingOrAfter && (
-        <div className="insight-card glass-card">
-          <div className="card-header">
-            <h4 className="card-title">🗳️ Votes</h4>
+        <div className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
+          <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Current phase</p>
+          <p className="mt-2 bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-2xl font-bold capitalize text-transparent">
+            {phase}
+          </p>
+          <p className="mt-3 text-sm leading-6 text-slate-300">{phaseDescriptions[phase] || phaseDescriptions.idle}</p>
+        </div>
+      </GlassPanel>
+
+      <GlassPanel className="p-5">
+        <div className="flex items-center gap-3">
+          <div className="rounded-2xl bg-blue-500/10 p-3 text-blue-300">
+            <Vote className="h-5 w-5" />
           </div>
-          <div className="votes-container">
-            {Object.entries(votes).length > 0 ? (
-              Object.entries(votes).map(([position, count], idx) => (
-                <div key={idx} className="vote-item">
-                  <div className="vote-info">
-                    <p className="vote-label">{position}</p>
-                    <p className="vote-count">{count}</p>
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Votes</p>
+            <h3 className="mt-1 text-lg font-semibold text-white">Resolution alignment</h3>
+          </div>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          {showVotes && totalVotes > 0 ? (
+            Object.entries(votes).map(([label, count]) => {
+              const width = totalVotes ? `${(count / totalVotes) * 100}%` : '0%'
+              return (
+                <div key={label} className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="capitalize text-slate-300">{label}</span>
+                    <span className="font-semibold text-white">{count}</span>
                   </div>
-                  <div className="vote-bar">
+                  <div className="h-2 rounded-full bg-slate-800">
                     <div
-                      className="vote-fill"
-                      style={{ width: `${(count / 5) * 100}%` }}
-                    ></div>
+                      className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400"
+                      style={{ width }}
+                    />
                   </div>
                 </div>
-              ))
-            ) : (
-              <p className="empty-votes">Tabulating votes...</p>
-            )}
+              )
+            })
+          ) : (
+            <p className="text-sm leading-6 text-slate-400">Vote bars will populate once the chamber enters voting.</p>
+          )}
+        </div>
+      </GlassPanel>
+
+      <GlassPanel className="p-5">
+        <div className="flex items-center gap-3">
+          <div className="rounded-2xl bg-cyan-400/10 p-3 text-cyan-300">
+            <Gavel className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Judge Result</p>
+            <h3 className="mt-1 text-lg font-semibold text-white">Verdict summary</h3>
           </div>
         </div>
-      )}
 
-      {/* Judge Verdict Card - Only show in judging phase */}
-      {isJudgingPhase && (
-        <div className="insight-card glass-card">
-          <div className="card-header">
-            <h4 className="card-title">⚖️ Final Verdict</h4>
-          </div>
-          <div className="verdict-content">
-            {verdict && verdict.winner ? (
-              <>
-                <p className="verdict-text">
-                  {verdict.reasoning || 'Debate concluded with balanced perspectives.'}
-                </p>
-                <div className="verdict-highlight">
-                  <p className="verdict-label">Winner</p>
-                  <p className="verdict-outcome">{verdict.winner}</p>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="verdict-text">
-                  Debate concluded with balanced perspectives across all participants.
-                </p>
-                <div className="verdict-highlight">
-                  <p className="verdict-label">Key Outcome</p>
-                  <p className="verdict-outcome">
-                    Collaborative approach with mutual understanding
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Waiting Message for other phases */}
-      {!isVotingOrAfter && phase !== 'idle' && (
-        <div className="insight-card glass-card waiting-message">
-          <div className="card-header">
-            <h4 className="card-title">⏳ Debate in Progress</h4>
-          </div>
-          <p className="waiting-text">
-            Results and verdicts will appear when voting phase begins.
+        <div className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
+          <p className="text-sm leading-6 text-slate-300">
+            {verdict?.reasoning || 'The judge panel will publish the winner and final rationale after deliberation.'}
           </p>
-        </div>
-      )}
-
-      {/* Ready Message for idle */}
-      {phase === 'idle' && (
-        <div className="insight-card glass-card ready-message">
-          <div className="card-header">
-            <h4 className="card-title">🚀 Ready to Start</h4>
+          <div className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.24em] text-cyan-200">Top outcome</p>
+            <p className="mt-2 text-base font-semibold text-white">
+              {verdict?.winner || 'Pending final committee judgment'}
+            </p>
           </div>
-          <p className="ready-text">
-            Enter a debate topic and select participants to begin.
-          </p>
         </div>
-      )}
+      </GlassPanel>
+
+      <GlassPanel className="p-5">
+        <div className="flex items-center gap-3">
+          <div className="rounded-2xl bg-white/5 p-3 text-slate-200">
+            <Layers3 className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">MCP Context</p>
+            <h3 className="mt-1 text-lg font-semibold text-white">Support signals</h3>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3">
+          {mockMcpContext.contextItems.map((item) => (
+            <div key={item} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+              {item}
+            </div>
+          ))}
+        </div>
+      </GlassPanel>
     </div>
-  );
-};
+  )
+}
 
-export default InsightPanel;
+export default InsightPanel

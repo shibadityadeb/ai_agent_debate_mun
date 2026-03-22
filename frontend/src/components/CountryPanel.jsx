@@ -1,85 +1,80 @@
-import React from 'react';
-import './CountryPanel.css';
+import React from 'react'
+import { Mic2, TimerReset, Users2 } from 'lucide-react'
+import { GlassPanel, cn } from './ui'
+
+const statusStyles = {
+  speaking: {
+    ring: 'border-cyan-400/40 bg-cyan-400/10',
+    dot: 'bg-cyan-300',
+    label: 'Speaking now',
+  },
+  active: {
+    ring: 'border-blue-400/30 bg-blue-500/10',
+    dot: 'bg-blue-300',
+    label: 'Engaged',
+  },
+  waiting: {
+    ring: 'border-white/10 bg-white/5',
+    dot: 'bg-slate-500',
+    label: 'Queued',
+  },
+}
 
 const CountryPanel = ({ countries, activeSpeaker }) => {
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'speaking':
-        return 'status-speaking';
-      case 'active':
-        return 'status-active';
-      case 'waiting':
-        return 'status-waiting';
-      default:
-        return '';
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'speaking':
-        return '🎤';
-      case 'active':
-        return '✋';
-      case 'waiting':
-        return '⏳';
-      default:
-        return '○';
-    }
-  };
-
   return (
-    <div className="country-panel glass-card">
-      <div className="country-header">
-        <h3 className="country-title">🌍 Participants</h3>
-        <span className="country-count">{countries.length}</span>
-      </div>
-
-      <div className="country-list">
-        {countries.map((country) => (
-          <div
-            key={country.id}
-            className={`country-item ${getStatusColor(country.status)} ${
-              country.name === activeSpeaker ? 'is-active-speaker' : ''
-            }`}
-          >
-            <div className="country-flag-container">
-              <span className="country-flag">{country.flag}</span>
-              <span className={`status-indicator ${getStatusColor(country.status)}`}></span>
-            </div>
-
-            <div className="country-info">
-              <h4 className="country-name">{country.name}</h4>
-              <p className="country-status">
-                <span className="status-icon">{getStatusIcon(country.status)}</span>
-                <span className="status-text">{country.status}</span>
-              </p>
-            </div>
-
-            <div className="country-score">
-              <span className="score-label">Score</span>
-              <span className="score-value">8.2</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="country-legend">
-        <div className="legend-item">
-          <span className="legend-dot speaking"></span>
-          <span>Currently Speaking</span>
+    <GlassPanel className="h-full p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.28em] text-slate-400">Country Panel</p>
+          <h2 className="mt-2 text-xl font-semibold text-white">Delegation roster</h2>
         </div>
-        <div className="legend-item">
-          <span className="legend-dot active"></span>
-          <span>Ready to Speak</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-dot waiting"></span>
-          <span>Waiting</span>
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/5 text-cyan-300">
+          <Users2 className="h-5 w-5" />
         </div>
       </div>
-    </div>
-  );
-};
 
-export default CountryPanel;
+      <div className="mt-6 space-y-3">
+        {countries.map((country) => {
+          const style = statusStyles[country.status] || statusStyles.waiting
+          const isActiveSpeaker = country.name === activeSpeaker
+
+          return (
+            <div
+              key={country.id}
+              className={cn(
+                'rounded-[1.5rem] border p-4 transition duration-300 hover:scale-[1.01] hover:border-cyan-400/30',
+                style.ring,
+                isActiveSpeaker && 'shadow-glow',
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950/80 text-2xl">
+                  <span>{country.flag}</span>
+                  <span
+                    className={cn(
+                      'absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full ring-4 ring-slate-900',
+                      style.dot,
+                    )}
+                  />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="truncate font-semibold text-white">{country.name}</p>
+                    <span className="text-sm font-semibold text-slate-200">{country.score}</span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400">
+                    {country.status === 'speaking' ? <Mic2 className="h-3.5 w-3.5" /> : <TimerReset className="h-3.5 w-3.5" />}
+                    <span>{style.label}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </GlassPanel>
+  )
+}
+
+export default CountryPanel

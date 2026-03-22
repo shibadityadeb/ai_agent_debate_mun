@@ -8,10 +8,7 @@ class ModeratorAgent(BaseAgent):
 
     def __init__(self, llm_client: LLMClient, name: str = "Moderator"):
         system_prompt = (
-            "You are the UN debate moderator. "
-            "Your role is to synthesize the positions of all countries, identify points of agreement and disagreement, "
-            "and suggest a path forward that respects all viewpoints while finding common ground. "
-            "Be fair, thoughtful, and diplomatic."
+            "UN moderator: Synthesize positions, find common ground, be diplomatic."
         )
         super().__init__(name=name, system_prompt=system_prompt, llm_client=llm_client)
 

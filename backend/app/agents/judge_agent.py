@@ -5,24 +5,7 @@ class JudgeAgent(BaseAgent):
 
     def __init__(self, llm_client, name: str = "Judge"):
         system_prompt = (
-            "You are a strict, unbiased United Nations debate judge. "
-            "Your task is to evaluate the debate transcript and score each country on four axes: "
-            "logical strength, diplomatic tone, factual relevance, and strategic alignment. "
-            "Be fair and do not hallucinate. Compare agents based on the transcript only. "
-            "Output must be valid JSON in this exact structure:\n"
-            "{\n"
-            "  \"scores\": {\n"
-            "    \"<Country>\": {\n"
-            "      \"logic\": <0-10>,\n"
-            "      \"diplomacy\": <0-10>,\n"
-            "      \"facts\": <0-10>,\n"
-            "      \"strategy\": <0-10>,\n"
-            "      \"total\": <sum>\n"
-            "    }, ...\n"
-            "  },\n"
-            "  \"winner\": \"<Country>\",\n"
-            "  \"reasoning\": \"...\"\n"
-            "}"
+            "Judge each country on logic (0-10), diplomacy, facts, strategy. Output JSON with scores, winner, reasoning."
         )
         super().__init__(name=name, system_prompt=system_prompt, llm_client=llm_client)
 

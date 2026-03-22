@@ -14,3 +14,9 @@ services:
         value: http://localhost:3000,http://localhost:5173,https://ai-debate-mun.vercel.app,https://diplomatrix-ai.vercel.app
       - key: CORS_ALLOW_ORIGIN_REGEX
         value: https://.*\.vercel\.app
+      - key: ENABLE_TOPIC_RETRIEVAL
+        value: false
+      - key: GROQ_TIMEOUT_SECONDS
+        value: 12
+      - key: GROQ_MAX_RETRIES
+        value: 2

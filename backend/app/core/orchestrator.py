@@ -1,4 +1,5 @@
 import asyncio
+import os
 import random
 from typing import Dict, List, Optional
 
@@ -23,7 +24,8 @@ class DebateOrchestrator:
         self.moderator = moderator
         self.judge = judge
         self.state = state
-        self.retriever = retriever or Retriever()
+        retrieval_enabled = os.getenv("ENABLE_TOPIC_RETRIEVAL", "false").lower() == "true"
+        self.retriever = retriever or (Retriever() if retrieval_enabled else None)
 
         if self.moderator is None:
             raise ValueError("Moderator agent must be initialized")
@@ -51,8 +53,14 @@ class DebateOrchestrator:
             return response.get("content") or response.get("text") or str(response)
         return str(response)
 
-    async def _generate_agent_message(self, agent: CountryAgent, phase: str, retrieved_context: str = "") -> None:
-        """Generate and store a single agent message sequentially."""
+    async def _generate_agent_message(
+        self,
+        agent: CountryAgent,
+        phase: str,
+        retrieved_context: str = "",
+        persist: bool = True,
+    ) -> str:
+        """Generate a single agent message and optionally store it."""
         print(f"{agent.name} generating response...")
         context = build_context(
             self.state,
@@ -62,17 +70,25 @@ class DebateOrchestrator:
         )
         response = await self._ask_agent(agent, context)
         text = self._normalize_response(response)
-        self.state.history.append(DebateMessage(agent=agent.name, role=phase, content=text))
         print(f"  -> {agent.name} ({phase}): {text[:80]}...")
-        await asyncio.sleep(1)
+        if persist:
+            self.state.history.append(DebateMessage(agent=agent.name, role=phase, content=text))
+        return text
 
     async def run_opening_round(self) -> None:
-        """Run opening statements sequentially."""
+        """Run opening statements in parallel to reduce latency."""
         self.state.current_round = "opening"
-        retrieved_context = self.retriever.get_context(self.state.topic)
+        retrieved_context = self.retriever.get_context(self.state.topic) if self.retriever else ""
 
-        for agent in self.agents:
-            await self._generate_agent_message(agent, "opening", retrieved_context)
+        responses = await asyncio.gather(
+            *[
+                self._generate_agent_message(agent, "opening", retrieved_context, persist=False)
+                for agent in self.agents
+            ]
+        )
+
+        for agent, text in zip(self.agents, responses):
+            self.state.history.append(DebateMessage(agent=agent.name, role="opening", content=text))
 
     async def run_rebuttal_round(self, rounds: int = 1) -> None:
         """Run rebuttal rounds sequentially so each agent sees prior responses."""
@@ -90,7 +106,7 @@ class DebateOrchestrator:
         """Generate final resolution from moderator."""
         self.state.current_round = "resolution"
         print("Running moderator phase...")
-        retrieved_context = self.retriever.get_context(self.state.topic)
+        retrieved_context = self.retriever.get_context(self.state.topic) if self.retriever else ""
         context = build_context(
             self.state,
             "moderator",
@@ -122,7 +138,7 @@ class DebateOrchestrator:
         """Judge evaluates the debate and returns score and reasoning."""
         self.state.current_round = "judging"
         print("Running judging phase...")
-        retrieved_context = self.retriever.get_context(self.state.topic)
+        retrieved_context = self.retriever.get_context(self.state.topic) if self.retriever else ""
         context = build_context(
             self.state,
             "judge",
@@ -146,10 +162,11 @@ class DebateOrchestrator:
         """Run full debate sequence and return final state."""
         print(f"🎭 [ORCHESTRATOR] Starting full debate on topic: {self.state.topic}")
 
-        try:
-            await self.retriever.fetch_and_store(self.state.topic)
-        except Exception as error:
-            print(f"⚠️  Context retrieval failed: {error}, continuing with debate")
+        if self.retriever:
+            try:
+                await self.retriever.fetch_and_store(self.state.topic)
+            except Exception as error:
+                print(f"⚠️  Context retrieval failed: {error}, continuing with debate")
 
         print("📝 [PHASE 1] Running Opening Round...")
         await self.run_opening_round()

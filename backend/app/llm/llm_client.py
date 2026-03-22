@@ -28,7 +28,8 @@ class LLMClient:
             raise ValueError("GROQ_API_KEY is required")
 
         self.model = model or os.getenv("GROQ_MODEL") or "llama-3.1-8b-instant"
-        self.timeout = timeout_seconds
+        self.timeout = float(os.getenv("GROQ_TIMEOUT_SECONDS", timeout_seconds))
+        self.max_retries = max(1, int(os.getenv("GROQ_MAX_RETRIES", "2")))
 
     async def generate(self, system_prompt: str, user_prompt: str) -> str:
         """Generate text completion using Groq."""
@@ -51,7 +52,7 @@ class LLMClient:
 
         try:
             async with httpx.AsyncClient(timeout=httpx.Timeout(self.timeout)) as client:
-                for attempt in range(3):
+                for attempt in range(self.max_retries):
                     response = await client.post(
                         self.GROQ_URL,
                         json=payload,
@@ -59,9 +60,14 @@ class LLMClient:
                     )
 
                     if response.status_code == 429:
-                        logger.warning("Groq rate limit hit on attempt %s/3: %s", attempt + 1, response.text)
-                        if attempt < 2:
-                            await asyncio.sleep(3)
+                        logger.warning(
+                            "Groq rate limit hit on attempt %s/%s: %s",
+                            attempt + 1,
+                            self.max_retries,
+                            response.text,
+                        )
+                        if attempt < self.max_retries - 1:
+                            await asyncio.sleep(1)
                             continue
                         print("LLM ERROR:", response.text)
                         return "Error: Rate limit exceeded"

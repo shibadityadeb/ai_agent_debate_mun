@@ -44,7 +44,7 @@ Deploy to production in minutes:
 
 - **Backend**: Render (FastAPI)
 - **Frontend**: Vercel (React)
-- **Guide**: See [DEPLOYMENT.md](./DEPLOYMENT.md) for step-by-step instructions
+
 
 For local setup: `chmod +x setup.sh && ./setup.sh`
 
